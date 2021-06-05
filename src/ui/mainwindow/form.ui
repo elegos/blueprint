@@ -63,15 +63,84 @@
              </size>
             </property>
             <layout class="QVBoxLayout" name="leftSideLayout">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>9</number>
+             </property>
              <item>
-              <widget class="QLineEdit" name="lineEdit">
-               <property name="placeholderText">
-                <string>Filter...</string>
+              <widget class="QGroupBox" name="flowsGroupBox">
+               <property name="title">
+                <string>Flows</string>
                </property>
+               <layout class="QVBoxLayout" name="verticalLayout_4">
+                <property name="leftMargin">
+                 <number>1</number>
+                </property>
+                <property name="topMargin">
+                 <number>1</number>
+                </property>
+                <property name="rightMargin">
+                 <number>1</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>1</number>
+                </property>
+                <item>
+                 <widget class="QListView" name="flowsListView"/>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout">
+                  <item>
+                   <widget class="QPushButton" name="deleteFlowPushButton">
+                    <property name="text">
+                     <string>Delete</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="newFlowPushButton">
+                    <property name="text">
+                     <string>New...</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
               </widget>
              </item>
              <item>
-              <widget class="QTreeView" name="treeView"/>
+              <widget class="QGroupBox" name="functionsGroupBox">
+               <property name="title">
+                <string>Functions</string>
+               </property>
+               <layout class="QVBoxLayout" name="verticalLayout_6">
+                <property name="leftMargin">
+                 <number>1</number>
+                </property>
+                <property name="topMargin">
+                 <number>1</number>
+                </property>
+                <property name="rightMargin">
+                 <number>1</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>1</number>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="functionsFilterLineEdit">
+                  <property name="placeholderText">
+                   <string>Filter...</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QTreeView" name="functionsTreeView"/>
+                </item>
+               </layout>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -88,11 +157,6 @@
               <height>0</height>
              </size>
             </property>
-            <widget class="QWidget" name="flow_1">
-             <attribute name="title">
-              <string>Unnamed flow</string>
-             </attribute>
-            </widget>
            </widget>
            <widget class="QWidget" name="inspectorWidget" native="true">
             <property name="sizePolicy">
@@ -158,7 +222,7 @@
      <x>0</x>
      <y>0</y>
      <width>1490</width>
-     <height>27</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -166,25 +230,102 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_project_root"/>
+    <addaction name="actionOpen_project"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuProject">
     <property name="title">
      <string>Project</string>
     </property>
-    <addaction name="actionEdit_include_list"/>
+    <addaction name="actionNew_flow"/>
+    <addaction name="actionManage_flows"/>
+    <addaction name="separator"/>
+    <addaction name="actionProject_settings"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionViewFlows"/>
+    <addaction name="actionViewFunctions"/>
+    <addaction name="actionViewObjectProperties"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuProject"/>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionOpen_project_root">
    <property name="text">
-    <string>Open project root...</string>
+    <string>Open project folder...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
-  <action name="actionEdit_include_list">
+  <action name="actionProject_settings">
    <property name="text">
-    <string>Edit include list...</string>
+    <string>Project settings...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+,</string>
+   </property>
+  </action>
+  <action name="actionNew_flow">
+   <property name="text">
+    <string>New flow...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionOpen_project">
+   <property name="text">
+    <string>Open project...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionManage_flows">
+   <property name="text">
+    <string>Manage flows...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="actionViewFlows">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Flows</string>
+   </property>
+  </action>
+  <action name="actionViewFunctions">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Functions</string>
+   </property>
+  </action>
+  <action name="actionViewObjectProperties">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Object properties</string>
    </property>
   </action>
  </widget>
