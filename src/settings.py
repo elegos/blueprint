@@ -1,6 +1,7 @@
-from dataclasses import dataclass, field
 from typing import Any, Optional
+from logging import Logger, getLogger
 
+import yaml
 from PySide6.QtCore import QObject, Signal, SignalInstance
 
 
@@ -52,10 +53,42 @@ class UI(DictConvertible, SignalChangedAutoTriggered):
         self.viewObjectProperties = viewObjectProperties
 
 
-@dataclass
-class Settings(DictConvertible):
-    ui: UI = field(default_factory=lambda: UI())
+class Settings(QObject, DictConvertible):
+    ui: UI
+
+    def __init__(self, ui: Optional[UI] = None, parent: Optional[QObject] = None) -> None:
+        super().__init__(parent=parent)
+        self.ui = ui if ui else UI()
 
     @staticmethod
-    def fromDict() -> 'Settings':
+    def fromFile(filePath: str) -> 'Settings':
+        with open(filePath, 'rb') as fh:
+            return Settings.fromDict(yaml.load(fh))
+
+    @staticmethod
+    def fromDict(dictionary: dict) -> 'Settings':
         pass
+
+
+class SettingsManager(QObject):
+    logger: Logger
+    settings: Settings
+
+    def __init__(self, settings: Settings, parent: Optional[QObject] = None) -> None:
+        super().__init__(parent=parent)
+        self.logger = getLogger('SettingsManager')
+
+        self.settings = settings
+        self.installUpdatesWatcher()
+
+    def installUpdatesWatcher(self, obj: Optional[QObject] = None):
+        obj = obj if obj else self.settings
+
+        for attr in obj.__dict__.values():
+            if type(attr) is SignalInstance:
+                attr.connect(self.updateWatcher)
+            elif isinstance(attr, QObject):
+                self.installUpdatesWatcher(attr)
+
+    def updateWatcher(self, *_) -> None:
+        self.logger.debug('Detected settings change')

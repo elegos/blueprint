@@ -9,6 +9,10 @@
       "type": "python",
       "request": "launch",
       "program": "main.py",
+      "args": [
+        "--log-level",
+        "DEBUG"
+      ],
       "console": "integratedTerminal"
     }
   ]

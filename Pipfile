@@ -8,6 +8,7 @@ autopep8 = "*"
 
 [packages]
 pyside6 = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.9"

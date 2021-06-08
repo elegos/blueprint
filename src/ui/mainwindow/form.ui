@@ -197,7 +197,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QTextEdit" name="logViewer">
+       <widget class="QPlainTextEdit" name="logViewer">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -209,6 +209,9 @@
           <width>16777215</width>
           <height>140</height>
          </size>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
