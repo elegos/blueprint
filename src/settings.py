@@ -1,7 +1,18 @@
-from typing import Any, Optional
+import inspect
+import os
 from logging import Logger, getLogger
+from os import path
+from pathlib import Path
+from typing import Any, Optional, Type, TypeVar
 
 import yaml
+
+try:
+    from yaml import CDumper as Dumper
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader, Dumper
+
 from PySide6.QtCore import QObject, Signal, SignalInstance
 
 
@@ -13,23 +24,39 @@ class SignalChangedAutoTriggered(QObject):
             signal.emit(value)
 
 
+T = TypeVar('T', bound='DictConvertible')
+
+
 class DictConvertible:
+    @staticmethod
+    def scalarValue(value) -> Any:
+        if type(value) in [str, int, float, bool] or value is None:
+            return value
+
+        return str(value)
+
+    def fromDict(self: Type[T], dictionary: dict) -> T:
+        for member in inspect.getmembers(self):
+            name, _ = member
+            if name in dictionary:
+                setattr(self, name, dictionary[name])
+
     def toDict(self, subElement: Any = None) -> dict:
         obj = {}
         objToDict = subElement if subElement else self
 
         for key, value in objToDict.__dict__.items():
-            if isinstance(value, Signal):
+            if isinstance(value, Signal) or key in ['filePath', 'logger']:
                 continue
 
             if callable(getattr(value, 'toDict', None)):
-                obj[key] = value
+                obj[key] = value.toDict()
             elif type(value) is list:
                 listValues = []
                 for val in value:
                     listValues.append(self.toDict(val))
             else:
-                obj[key] = value
+                obj[key] = DictConvertible.scalarValue(value)
 
         return obj
 
@@ -54,20 +81,27 @@ class UI(DictConvertible, SignalChangedAutoTriggered):
 
 
 class Settings(QObject, DictConvertible):
+    filePath: Optional[Path]
+    logger: Logger
     ui: UI
 
-    def __init__(self, ui: Optional[UI] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(self, filePath: Path = None, ui: Optional[UI] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(parent=parent)
         self.ui = ui if ui else UI()
+        self.filePath = filePath.absolute()
+        self.logger = getLogger('Settings')
 
-    @staticmethod
-    def fromFile(filePath: str) -> 'Settings':
-        with open(filePath, 'rb') as fh:
-            return Settings.fromDict(yaml.load(fh))
+    def setFilePath(self, path: str) -> None:
+        self.filePath = Path(path).absolute()
 
-    @staticmethod
-    def fromDict(dictionary: dict) -> 'Settings':
-        pass
+    def load(self):
+        if not self.filePath:
+            self.logger.warn(
+                'Trying to load settings without a settings file, aborting.')
+            return
+        with open(self.filePath, 'r') as fh:
+            dictionary = yaml.load(fh, Loader=Loader)
+            self.ui.fromDict(dictionary['ui'])
 
 
 class SettingsManager(QObject):
@@ -92,3 +126,11 @@ class SettingsManager(QObject):
 
     def updateWatcher(self, *_) -> None:
         self.logger.debug('Detected settings change')
+        if not self.settings.filePath:
+            return
+        bpDir = self.settings.filePath.parent
+        if not bpDir.exists():
+            os.mkdir(bpDir)
+
+        with open(self.settings.filePath, 'w') as fh:
+            yaml.dump(self.settings.toDict(), stream=fh, Dumper=Dumper)
