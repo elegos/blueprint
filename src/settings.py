@@ -1,8 +1,8 @@
 import inspect
 import os
 from logging import Logger, getLogger
-from os import path
 from pathlib import Path
+from src.singleton import Singleton
 from typing import Any, Optional, Type, TypeVar
 
 import yaml
@@ -45,7 +45,7 @@ class DictConvertible:
         obj = {}
         objToDict = subElement if subElement else self
 
-        for key, value in objToDict.__dict__.items():
+        for key, value in [(key, value) for key, value in objToDict.__dict__.items() if not key.startswith('_')]:
             if isinstance(value, Signal) or key in ['filePath', 'logger']:
                 continue
 
@@ -80,7 +80,7 @@ class UI(DictConvertible, SignalChangedAutoTriggered):
         self.viewObjectProperties = viewObjectProperties
 
 
-class Settings(QObject, DictConvertible):
+class Settings(Singleton, QObject, DictConvertible):
     filePath: Optional[Path]
     logger: Logger
     ui: UI
@@ -104,12 +104,11 @@ class Settings(QObject, DictConvertible):
             self.ui.fromDict(dictionary['ui'])
 
 
-class SettingsManager(QObject):
+class SettingsManager:
     logger: Logger
     settings: Settings
 
-    def __init__(self, settings: Settings, parent: Optional[QObject] = None) -> None:
-        super().__init__(parent=parent)
+    def __init__(self, settings: Settings) -> None:
         self.logger = getLogger('SettingsManager')
 
         self.settings = settings

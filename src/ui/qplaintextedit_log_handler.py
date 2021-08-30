@@ -10,7 +10,7 @@ class QPlainTextEditLogHandler(Handler):
         super().__init__(level=logging.root.level)
 
         self.setFormatter(logging.Formatter(
-            '%(asctime)s [%(name)s] %(levelname)s: %(message)s'))
+            fmt='%(asctime)s [%(name)s - %(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 
         self.widget = widget
         self.widget.setReadOnly(True)

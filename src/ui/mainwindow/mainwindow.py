@@ -3,6 +3,8 @@ from io import StringIO
 import logging
 import os
 from pathlib import Path
+from src.project import ProjectFunctions
+from src.ui.project_settings.projectsettings import ProjectSettingsWidget
 from src.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from src.settings import Settings
 
@@ -32,6 +34,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.signals = MainWindowSignals()
         self.settings = settings
+        self.logger: logging.Logger
 
         self.load_ui()
         self.init_ui()
@@ -70,6 +73,8 @@ class MainWindow(QMainWindow):
             lambda _: QApplication.instance().quit())
 
         self.menu.signals.onOpenProject.connect(self.openProjectDialog)
+        self.menu.signals.onOpenProjectRoot.connect(
+            self.openProjectFolderDialog)
 
     def init_ui(self) -> None:
         self.flowsGroupBox.setVisible(self.settings.ui.viewFlows)
@@ -91,13 +96,15 @@ class MainWindow(QMainWindow):
             self.onViewHideEvent)
 
     def init_logger(self) -> None:
-        logger = logging.getLogger()
+        rootLogger = logging.getLogger()
+        self.logger = logging.getLogger('Main window')
+
         self.logStream = StringIO()
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
+        for handler in self.logger.handlers:
+            rootLogger.removeHandler(handler)
 
         handler = QPlainTextEditLogHandler(self.logViewer)
-        logger.addHandler(handler)
+        rootLogger.addHandler(handler)
 
     def onViewHideEvent(self, *args) -> None:
         self.ui.findChild(QWidget, 'leftSideWidget').setVisible(
@@ -106,11 +113,24 @@ class MainWindow(QMainWindow):
         self.ui.findChild(QWidget, 'inspectorWidget').setVisible(
             self.settings.ui.viewObjectProperties)
 
+    def openProjectFolderDialog(self, _) -> None:
+        projectFolder = QFileDialog.getExistingDirectory()
+
+        self.logger.info(f'Project folder: {projectFolder}')
+        projectSettings = ProjectSettingsWidget()
+        projectSettings.show()
+        projectSettings.raise_()
+
+        projectFunctions = ProjectFunctions()
+        projectFunctions.loadFunctions(path=projectFolder)
+        self.logger.warn('STUB: load project folder')
+
     def openProjectDialog(self, _) -> None:
         projectFile, _ = QFileDialog.getOpenFileName(
             self, 'Open project file...', QDir.homePath(), 'Project file (*.bpprj)')
 
-        print(projectFile)
+        self.logger.info(f'Project file: {projectFile}')
+        self.logger.warn('STUB: load project file')
 
     def show(self) -> None:
         return self.ui.show()

@@ -1,25 +1,24 @@
 import argparse
+import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Optional
 
 from PySide6.QtWidgets import QApplication
 
-from src.settings import Settings, SettingsManager
-from src.ui.mainwindow.mainwindow import MainWindow
+from src import Settings, SettingsManager
+from src.ui import MainWindow
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--log-level', help='DEBUG, INFO, WARN, ERROR, CRITICAL (default INFO)', default='INFO')
-    parser.add_argument('--project-file', help='Path to the *.bpprj file')
     parser.add_argument(
         'project_path', help='Path of a project directory or bpprj file', default=None)
     args = parser.parse_args()
 
-    projectFile: Optional[str] = args.project_file
-    logLevel: str = args.log_level
+    logging.getLogger().setLevel(args.log_level)
 
     projectPath: Optional[Path] = None
     if args.project_path:

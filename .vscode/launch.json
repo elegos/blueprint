@@ -11,7 +11,43 @@
       "program": "main.py",
       "args": [
         "--log-level",
-        "DEBUG"
+        "INFO",
+        "/home/gfurlan/Development/alperia-dp/"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Main application (DEBUG)",
+      "type": "python",
+      "request": "launch",
+      "program": "main.py",
+      "args": [
+        "--log-level",
+        "DEBUG",
+        "/home/gfurlan/Development/alperia-dp/"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Scanner",
+      "type": "python",
+      "request": "launch",
+      "program": "scanner.py",
+      "args": [
+        "--package-path",
+        "/home/gfurlan/Development/alperia-dp/glue/etl"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Scanner (no pipenv check)",
+      "type": "python",
+      "request": "launch",
+      "program": "scanner.py",
+      "args": [
+        "--from-target-pipenv",
+        "--package-path",
+        "/home/gfurlan/Development/alperia-dp/glue/etl"
       ],
       "console": "integratedTerminal"
     }
