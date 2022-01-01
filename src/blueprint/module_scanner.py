@@ -11,7 +11,7 @@ from setuptools import find_packages
 from blueprint.function import Function
 
 
-def functionsScanner(
+def functions_scanner(
         packagePath: str,
         filter: Optional[Literal['regex']] = None) -> List[Function]:
     '''
