@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication
 from blueprint.settings import Settings, SettingsManager
 from blueprint.ui.mainwindow.mainwindow import MainWindow
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -44,6 +45,7 @@ def main():
 
     widget.signals.closed.connect(lambda: app.quit())
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()

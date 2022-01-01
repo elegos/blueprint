@@ -35,7 +35,7 @@ def functionsScanner(
         if pattern is None or pattern.search(pkg) is None:
             modules.add(pkg)
         for info in iter_modules(
-            [f'{packagePath}{sep}{pkg.replace(".", sep)}']):
+                [f'{packagePath}{sep}{pkg.replace(".", sep)}']):
             if not info.ispkg and (pattern is None
                                    or pattern.search(info.name) is None):
                 modules.add(pkg + '.' + info.name)

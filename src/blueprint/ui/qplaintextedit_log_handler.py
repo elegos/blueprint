@@ -1,9 +1,9 @@
-from logging import Handler, LogRecord
 import logging
+
 from PySide6.QtWidgets import QPlainTextEdit
 
 
-class QPlainTextEditLogHandler(Handler):
+class QPlainTextEditLogHandler(logging.Handler):
     widget: QPlainTextEdit
 
     def __init__(self, widget: QPlainTextEdit) -> None:
@@ -16,7 +16,7 @@ class QPlainTextEditLogHandler(Handler):
         self.widget.setReadOnly(True)
         self.widget.setCenterOnScroll(True)
 
-    def emit(self, record: LogRecord) -> None:
+    def emit(self, record: logging.LogRecord) -> None:
         message = self.format(record)
         self.widget.appendPlainText(message)
         self.widget.ensureCursorVisible()
