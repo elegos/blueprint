@@ -1,5 +1,4 @@
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -31,8 +30,8 @@ def main():
         basePath = projectPath
         if projectPath.is_file():
             basePath = projectPath.parent.absolute()
-        settingsFilePath = Path(os.path.sep.join(
-            [str(basePath), '.blueprint', 'settings.yml'])) if projectPath else None
+        settingsFilePath = basePath.joinpath(
+            '.blueprint', 'settings.yml') if projectPath else None
     settings = Settings(filePath=settingsFilePath)
     if settings.filePath:
         settings.load()
