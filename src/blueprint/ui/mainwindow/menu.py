@@ -1,8 +1,7 @@
-from src.settings import Settings
-from typing import List, Optional
+from blueprint.settings import Settings
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QWidget
 
 
 class MenuSignals(QObject):

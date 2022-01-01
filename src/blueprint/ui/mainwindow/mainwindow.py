@@ -1,15 +1,17 @@
 # This Python file uses the following encoding: utf-8
-from io import StringIO
 import logging
 import os
+from io import StringIO
 from pathlib import Path
-from src.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
-from src.settings import Settings
 
-from PySide6.QtWidgets import QApplication, QFileDialog, QGroupBox, QMainWindow, QPlainTextEdit, QTableWidget, QWidget
+from blueprint.settings import Settings
+from blueprint.ui.mainwindow.menu import Menu
+from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from PySide6.QtCore import QDir, QEvent, QFile, QObject, Signal
 from PySide6.QtUiTools import QUiLoader
-from src.ui.mainwindow.menu import Menu
+from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
+                               QMainWindow, QPlainTextEdit, QTableWidget,
+                               QWidget)
 
 
 class MainWindowSignals(QObject):

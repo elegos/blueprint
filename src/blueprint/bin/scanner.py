@@ -1,7 +1,7 @@
 from os.path import abspath, dirname, sep
-from src.moduleScanner import functionsScanner
+from blueprint.moduleScanner import functionsScanner
 
-if __name__ == '__main__':
+def main():
     print('')
     print('')
     print('')
@@ -10,3 +10,6 @@ if __name__ == '__main__':
         sep.join([dirname(__file__), '..', 'alperia-dp', 'glue', 'etl']))
 
     print(functionsScanner(path, r'_test'))
+
+if __name__ == '__main__':
+    main()

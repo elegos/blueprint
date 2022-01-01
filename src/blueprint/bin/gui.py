@@ -1,15 +1,15 @@
 import argparse
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Optional
 
 from PySide6.QtWidgets import QApplication
 
-from src.settings import Settings, SettingsManager
-from src.ui.mainwindow.mainwindow import MainWindow
+from blueprint.settings import Settings, SettingsManager
+from blueprint.ui.mainwindow.mainwindow import MainWindow
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--log-level', help='DEBUG, INFO, WARN, ERROR, CRITICAL (default INFO)', default='INFO')
@@ -44,3 +44,6 @@ if __name__ == "__main__":
 
     widget.signals.closed.connect(lambda: app.quit())
     sys.exit(app.exec())
+
+if __name__ == '__main__':
+    main()

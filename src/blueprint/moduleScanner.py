@@ -1,14 +1,14 @@
-from src.function import Function
+import re
 import sys
 from importlib import import_module
-from inspect import signature, getmembers, isfunction
+from inspect import getmembers, isfunction, signature
 from os import sep
 from pkgutil import iter_modules
-import re
-from typing import List, Optional, Set
+from typing import List, Literal, Optional, Set
 
 from setuptools import find_packages
-from typing_extensions import Literal
+
+from blueprint.function import Function
 
 
 def functionsScanner(

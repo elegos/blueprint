@@ -8,10 +8,12 @@
       "name": "Main application",
       "type": "python",
       "request": "launch",
-      "program": "main.py",
+      "module": "blueprint.bin.gui",
+      "cwd": "${workspaceFolder}/src",
       "args": [
         "--log-level",
-        "DEBUG"
+        "DEBUG",
+        "."
       ],
       "console": "integratedTerminal"
     }

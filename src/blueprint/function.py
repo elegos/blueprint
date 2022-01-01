@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from inspect import Parameter, Signature
-from typing import List
+from inspect import Signature
 
 
 @dataclass
