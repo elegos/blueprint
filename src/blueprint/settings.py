@@ -95,11 +95,12 @@ class Settings(QObject, DictConvertible):
         self.filePath = Path(path).absolute()
 
     def load(self):
-        if not self.filePath:
+        if not self.filePath or not self.filePath.exists():
             self.logger.warn(
                 'Trying to load settings without a settings file, aborting.')
             return
-        with open(self.filePath, 'r') as fh:
+
+        with self.filePath.open('r') as fh:
             dictionary = yaml.load(fh, Loader=Loader)
             self.ui.fromDict(dictionary['ui'])
 
