@@ -15,6 +15,8 @@ except ImportError:
 
 from PySide6.QtCore import QObject, Signal, SignalInstance
 
+BLUEPRINT_FOLDER_NAME = '.blueprint'
+
 
 class SignalChangedAutoTriggered(QObject):
     def __setattr__(self, name: str, value: Any) -> None:
@@ -85,11 +87,21 @@ class Settings(QObject, DictConvertible):
     logger: Logger
     ui: UI
 
-    def __init__(self, filePath: Path = None, ui: Optional[UI] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(
+        self, filePath: Path = None, ui: Optional[UI] = None,
+        parent: Optional[QObject] = None, load: bool = False
+    ) -> None:
         super().__init__(parent=parent)
         self.ui = ui if ui else UI()
-        self.filePath = filePath.absolute()
+        self.filePath = filePath.absolute() if filePath else None
         self.logger = getLogger('Settings')
+
+        if load and self.filePath:
+            self.load()
+
+    @staticmethod
+    def get_settings_path(project_path: Path) -> Path:
+        return project_path.joinpath(BLUEPRINT_FOLDER_NAME, 'settings.yml')
 
     def setFilePath(self, path: str) -> None:
         self.filePath = Path(path).absolute()
@@ -104,10 +116,31 @@ class Settings(QObject, DictConvertible):
             dictionary = yaml.load(fh, Loader=Loader)
             self.ui.fromDict(dictionary['ui'])
 
+    def get_project_root(self) -> Optional[Path]:
+        if self.filePath:
+            return self.filePath.parent.parent
+
+        return None
+
 
 class SettingsManager(QObject):
     logger: Logger
     settings: Settings
+
+    __instances = {}
+
+    @staticmethod
+    def get_instance(settings: Settings, parent: Optional[QObject] = None) -> Optional['SettingsManager']:
+        if not settings.filePath:
+            return None
+
+        if str(settings.filePath) in SettingsManager.__instances:
+            return SettingsManager.__instances[str(settings.filePath)]
+
+        manager = SettingsManager(settings, parent=parent)
+        SettingsManager.__instances[str(settings.filePath)] = manager
+
+        return manager
 
     def __init__(self, settings: Settings, parent: Optional[QObject] = None) -> None:
         super().__init__(parent=parent)

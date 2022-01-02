@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QWidget
 class MenuSignals(QObject):
     # File
     onOpenProjectRoot = Signal(bool)
-    onOpenProject = Signal(bool)
     onExit = Signal(bool)
     # Project
     onProjectSettings = Signal(bool)
@@ -25,7 +24,6 @@ class Menu:
 
     # File
     actionOpenProjectRoot: QAction
-    actionOpenProject: QAction
     actionExit: QAction
     # Project
     actionProjectSettings: QAction
@@ -40,8 +38,6 @@ class Menu:
         self.signals = MenuSignals()
         self.actionOpenProjectRoot.triggered.connect(
             self.signals.onOpenProjectRoot)
-        self.actionOpenProject.triggered.connect(
-            self.signals.onOpenProject)
         self.actionProjectSettings.triggered.connect(
             self.signals.onProjectSettings)
         self.actionNewFlow.triggered.connect(self.signals.onNewFlow)
@@ -66,8 +62,6 @@ class Menu:
 
         self.actionOpenProjectRoot = ui.findChild(
             QAction, 'actionOpen_project_root')
-        self.actionOpenProject = ui.findChild(
-            QAction, 'actionOpen_project')
         self.actionProjectSettings = ui.findChild(
             QAction, 'actionProject_settings')
         self.actionExit = ui.findChild(QAction, 'actionExit')

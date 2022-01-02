@@ -3,8 +3,11 @@ import logging
 import os
 from io import StringIO
 from pathlib import Path
+from typing import Callable
+from blueprint.module_scanner import functions_scanner
+from blueprint.project import Project
 
-from blueprint.settings import Settings
+from blueprint.settings import Settings, SettingsManager
 from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from PySide6.QtCore import QDir, QEvent, QFile, QObject, Signal
@@ -71,7 +74,8 @@ class MainWindow(QMainWindow):
         self.menu.signals.onExit.connect(
             lambda _: QApplication.instance().quit())
 
-        self.menu.signals.onOpenProject.connect(self.openProjectDialog)
+        self.menu.signals.onOpenProjectRoot.connect(
+            self.openProjectDialog)
 
     def init_ui(self) -> None:
         self.flowsGroupBox.setVisible(self.settings.ui.viewFlows)
@@ -108,11 +112,20 @@ class MainWindow(QMainWindow):
         self.ui.findChild(QWidget, 'inspectorWidget').setVisible(
             self.settings.ui.viewObjectProperties)
 
-    def openProjectDialog(self, _) -> None:
-        projectFile, _ = QFileDialog.getOpenFileName(
-            self, 'Open project file...', QDir.homePath(), 'Project file (*.bpprj)')
+    def openProjectDialog(self, *args) -> Callable:
+        pathStr = QFileDialog.getExistingDirectory(
+            self, 'Open project folder...', QDir.homePath())
 
-        print(projectFile)
+        project_path = Path(pathStr).absolute()
+
+        if not project_path:
+            return
+
+        settings = Settings(
+            filePath=Settings.get_settings_path(project_path), load=True)
+
+        # TODO store project variable somewhere
+        project = Project.load(SettingsManager.get_instance(settings))
 
     def show(self) -> None:
         return self.ui.show()

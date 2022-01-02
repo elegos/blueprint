@@ -1,9 +1,11 @@
 import argparse
+import logging
 import sys
 from pathlib import Path
 from typing import Optional
 
 from PySide6.QtWidgets import QApplication
+from blueprint.project import Project
 
 from blueprint.settings import Settings, SettingsManager
 from blueprint.ui.mainwindow.mainwindow import MainWindow
@@ -13,13 +15,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--log-level', help='DEBUG, INFO, WARN, ERROR, CRITICAL (default INFO)', default='INFO')
-    parser.add_argument('--project-file', help='Path to the *.bpprj file')
     parser.add_argument(
-        'project_path', help='Path of a project directory or bpprj file', default=None)
+        '--project-path', help='Path of the project directory', default=None)
     args = parser.parse_args()
 
-    projectFile: Optional[str] = args.project_file
     logLevel: str = args.log_level
+    logging.getLogger().setLevel(logging.getLevelName(logLevel))
 
     projectPath: Optional[Path] = None
     if args.project_path:
@@ -28,14 +29,12 @@ def main():
     settingsFilePath = None
     if projectPath:
         basePath = projectPath
-        if projectPath.is_file():
-            basePath = projectPath.parent.absolute()
-        settingsFilePath = basePath.joinpath(
-            '.blueprint', 'settings.yml') if projectPath else None
-    settings = Settings(filePath=settingsFilePath)
-    if settings.filePath:
-        settings.load()
-    settingsManager = SettingsManager(settings)
+        settingsFilePath = Settings.get_settings_path(
+            basePath) if projectPath else None
+
+    settings = Settings(filePath=settingsFilePath, load=True)
+    if settings.get_project_root():
+        project = Project.load(SettingsManager.get_instance(settings))
 
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
