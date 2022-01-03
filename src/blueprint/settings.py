@@ -1,7 +1,6 @@
 import inspect
 import os
 from logging import Logger, getLogger
-from os import path
 from pathlib import Path
 from typing import Any, Optional, Type, TypeVar
 
@@ -16,17 +15,22 @@ except ImportError:
 from PySide6.QtCore import QObject, Signal, SignalInstance
 
 BLUEPRINT_FOLDER_NAME = '.blueprint'
+T = TypeVar('T')
 
 
-class SignalChangedAutoTriggered(QObject):
-    def __setattr__(self, name: str, value: Any) -> None:
-        super().__setattr__(name, value)
-        signal = getattr(self, f'{name}Changed', None)
-        if type(signal) is SignalInstance:
-            signal.emit(value)
+def autoemit(name: str, type: T) -> T:
+    attr_name = f'__{name}'
+    signal_attr_name = f'{name}Changed'
 
+    def getter(self) -> T:
+        return getattr(self, attr_name)
 
-T = TypeVar('T', bound='DictConvertible')
+    def setter(self, new_value: T):
+        setattr(self, attr_name, new_value)
+
+        getattr(self, signal_attr_name).emit(new_value)
+
+    return property(getter, setter)
 
 
 class DictConvertible:
@@ -63,14 +67,15 @@ class DictConvertible:
         return obj
 
 
-class UI(DictConvertible, SignalChangedAutoTriggered):
+class UI(QObject, DictConvertible):
     viewFlowsChanged = Signal(bool)
     viewFunctionsChanged = Signal(bool)
     viewObjectPropertiesChanged = Signal(bool)
 
-    viewFlows: bool
-    viewFunctions: bool
-    viewObjectProperties: bool
+    viewFlows = autoemit('viewFlows', bool)
+    viewFunctions = autoemit('viewFunctions', bool)
+    viewObjectProperties = autoemit(
+        'viewObjectProperties', bool)
 
     def __init__(
         self, parent: Optional[QObject] = None, viewFlows: bool = True, viewFunctions: bool = True, viewObjectProperties: bool = True
