@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import re
 import sys
@@ -26,32 +27,38 @@ def functions_scanner(
             If set, filter out the modules matching the pattern
     '''
 
-    sys.path.append(str(packagePath))
-
     pattern: Optional[re.Pattern[re.AnyStr @ compile]] = None
     if filter is not None:
         pattern = re.compile(filter)
     modules: Set[str] = set()
-    for pkg in find_packages(str(packagePath)):
-        if pattern is None or pattern.search(pkg) is None:
-            modules.add(pkg)
-        for info in iter_modules(
-                [f'{packagePath}{sep}{pkg.replace(".", sep)}']):
-            if not info.ispkg and (pattern is None
-                                   or pattern.search(info.name) is None):
-                modules.add(pkg + '.' + info.name)
 
     result: List[Function] = []
-    for module in modules:
-        moduleObj = import_module(module)
-        moduleFunctions = [
-            member for member in getmembers(moduleObj, isfunction)
-            if member[1].__module__ == moduleObj.__name__
-        ]
+    try:
+        for pkg in find_packages(str(packagePath)):
+            if pattern is None or pattern.search(pkg) is None:
+                modules.add(pkg)
+            for info in iter_modules(
+                    [f'{packagePath}{sep}{pkg.replace(".", sep)}']):
+                if not info.ispkg and (pattern is None
+                                       or pattern.search(info.name) is None):
+                    modules.add(pkg + '.' + info.name)
 
-        for fn in moduleFunctions:
-            result.append(
-                Function(module=module, name=fn[0],
-                         signature=signature(fn[1])))
+        for module in modules:
+            moduleObj = import_module(module)
+            moduleFunctions = [
+                member for member in getmembers(moduleObj, isfunction)
+                if member[1].__module__ == moduleObj.__name__
+            ]
 
-    return result
+            for fn in moduleFunctions:
+                result.append(
+                    Function(module=module, name=fn[0],
+                             signature=signature(fn[1])))
+
+        return result
+    except ModuleNotFoundError as ex:
+        logging.getLogger('module_scanner').error(
+            f'{ex.msg}\n'
+            + '\nYou are either missing it in your system,'
+            + ' or you are using the scanner outside its virtual environment.\n'
+        )
