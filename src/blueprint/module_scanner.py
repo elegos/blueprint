@@ -1,21 +1,43 @@
 import logging
-from pathlib import Path
-import re
-import sys
+from configparser import ConfigParser
 from importlib import import_module
 from inspect import getmembers, isfunction, signature
 from os import sep
+from pathlib import Path
 from pkgutil import iter_modules
-from typing import List, Literal, Optional, Set, Union
+import sys
+from typing import AnyStr, List, Optional, Pattern, Set, Union
 
+import pkg_resources
 from setuptools import find_packages
+from importlib import metadata
 
 from blueprint.function import Function
 
 
+def get_package_modules(package_name: Path, pattern: Optional[Pattern]) -> List[str]:
+    result = [package_name]
+
+    try:
+        module = import_module(package_name)
+        package_path = Path(module.__file__).parent
+
+        for module_info in iter_modules([str(package_path)]):
+            module_import = f'{package_name}.{module_info.name}'
+
+            if module_info.ispkg:
+                result.extend(get_package_modules(module_import, pattern))
+            elif not pattern or not pattern.search(module_info.name):
+                result.append(module_import)
+    except ImportError as err:
+        pass
+
+    return result
+
+
 def functions_scanner(
-        packagePath: Union[Path, str],
-        filter: Optional[Literal['regex']] = None) -> List[Function]:
+        src_root: Union[Path, str],
+        filter: str = None) -> List[Function]:
     '''
         Scan the path for all the package's modules functions
 
@@ -23,37 +45,73 @@ def functions_scanner(
         ----------
         packagePath : str
             The base path of the package which has to be scanned
-        filter : Literal['regex'] (optional)
-            If set, filter out the modules matching the pattern
+        filter : str (optional)
+            If set, filter out the modules matching the regex pattern
     '''
 
-    pattern: Optional[re.Pattern[re.AnyStr @ compile]] = None
+    pattern: Optional[Pattern] = None
     if filter is not None:
-        pattern = re.compile(filter)
-    modules: Set[str] = set()
+        pattern = compile(filter)
+    modules: List[str] = []
+
+    pipfilePath = src_root.joinpath('Pipfile')
+    requirementsPath = src_root.joinpath('requirements.txt')
+    if pipfilePath.exists():
+        parser = ConfigParser()
+        parser.read(pipfilePath)
+        if parser.has_section('packages'):
+            for package_name in parser['packages'].keys():
+                init_files = [(len(str(path).split('/')), path) for path in metadata.distribution(
+                    package_name).files if str(path).endswith('__init__.py')]
+
+                if init_files:
+                    min_path = min(init_files, key=lambda x: x[0])[0]
+                    top_level_packages = ['.'.join(str(ppath[1]).split('/')[:-1])
+                                          for ppath in init_files if ppath[0] == min_path]
+
+                    for top_level in top_level_packages:
+                        modules.extend(get_package_modules(top_level, pattern))
+
+    elif requirementsPath.exists():
+        moduleNameRe = compile(r'^([^~=<>]+)')
+        with requirementsPath.open('r') as fh, fh.readlines() as lines:
+            lines: List[str] = lines
+            for line in lines:
+                matches = moduleNameRe.match(line.strip())
+                if not matches:
+                    continue
+                package_name = matches[1]
+                modules.append(get_package_modules(package_name))
 
     result: List[Function] = []
     try:
-        for pkg in find_packages(str(packagePath)):
+        for pkg in find_packages(str(src_root)):
             if pattern is None or pattern.search(pkg) is None:
-                modules.add(pkg)
+                modules.append(pkg)
             for info in iter_modules(
-                    [f'{packagePath}{sep}{pkg.replace(".", sep)}']):
+                    [f'{src_root}{sep}{pkg.replace(".", sep)}']):
                 if not info.ispkg and (pattern is None
                                        or pattern.search(info.name) is None):
-                    modules.add(pkg + '.' + info.name)
+                    modules.append(pkg + '.' + info.name)
 
+        sys.path.append(str(src_root))
         for module in modules:
-            moduleObj = import_module(module)
-            moduleFunctions = [
-                member for member in getmembers(moduleObj, isfunction)
-                if member[1].__module__ == moduleObj.__name__
-            ]
+            try:
+                moduleObj = import_module(module)
+                moduleFunctions = [
+                    member for member in getmembers(moduleObj, isfunction)
+                    if member[1].__module__ == moduleObj.__name__
+                ]
 
-            for fn in moduleFunctions:
-                result.append(
-                    Function(module=module, name=fn[0],
-                             signature=signature(fn[1])))
+                for fn in moduleFunctions:
+                    result.append(
+                        Function(module=module, name=fn[0],
+                                 signature=signature(fn[1])))
+
+            except ImportError as ex:
+                logging.getLogger('module_scanner').error(
+                    f'Error loading package {module}: {ex.msg}'
+                )
 
         return result
     except ModuleNotFoundError as ex:
