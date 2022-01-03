@@ -10,6 +10,8 @@ class Project:
     functions: List[Function]
     flows: List  # TODO
 
+    logger = logging.getLogger('Project')
+
     @staticmethod
     def load(settings_manager: SettingsManager) -> 'Project':
         project_root = settings_manager.settings.get_project_root()
@@ -29,4 +31,4 @@ class Project:
         self.functions = functions
         self.flows = flows
 
-        logging.getLogger().debug(self.functions)
+        self.logger.debug(self.functions)
