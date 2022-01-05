@@ -112,11 +112,11 @@ def functions_scanner(
                 logging.getLogger('module_scanner').error(
                     f'Error loading package {module}: {ex.msg}'
                 )
-
-        return result
     except ModuleNotFoundError as ex:
         logging.getLogger('module_scanner').error(
             f'{ex.msg}\n'
             + '\nYou are either missing it in your system,'
             + ' or you are using the scanner outside its virtual environment.\n'
         )
+    finally:
+        return result

@@ -33,12 +33,14 @@ def main():
             basePath) if projectPath else None
 
     settings = Settings(filePath=settingsFilePath, load=True)
+    project = None
     if settings.get_project_root():
         project = Project.load(SettingsManager.get_instance(settings))
 
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
-    widget = MainWindow(settings=settings)
+    widget = MainWindow(settings=settings, project=project)
+    widget.load_functions_from_project()
     widget.show()
 
     widget.signals.closed.connect(lambda: app.quit())

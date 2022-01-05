@@ -3,17 +3,20 @@ import logging
 import os
 from io import StringIO
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Dict
+
+from PySide6.QtGui import QStandardItemModel
 from blueprint.module_scanner import functions_scanner
 from blueprint.project import Project
 
 from blueprint.settings import Settings, SettingsManager
+from blueprint.ui.mainwindow.functions_tree import TreeItem
 from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
-from PySide6.QtCore import QDir, QEvent, QFile, QObject, Signal
+from PySide6.QtCore import QEvent, QFile, QObject, Signal
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
-                               QMainWindow, QPlainTextEdit, QTableWidget,
+                               QMainWindow, QPlainTextEdit, QTableWidget, QTreeView,
                                QWidget)
 
 
@@ -26,17 +29,21 @@ class MainWindow(QMainWindow):
     logStream: StringIO
 
     settings: Settings
+    project: Project
+
     ui: QWidget
     menu: Menu
     flowsGroupBox: QGroupBox
     functionsGroupBox: QGroupBox
+    functionsTreeView: QTreeView
     propertiesTableWidget: QTableWidget
     logViewer: QPlainTextEdit
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, project: Project = None) -> None:
         super(MainWindow, self).__init__()
         self.signals = MainWindowSignals()
         self.settings = settings
+        self.project = project
 
         self.load_ui()
         self.init_ui()
@@ -56,11 +63,14 @@ class MainWindow(QMainWindow):
         self.flowsGroupBox = self.ui.findChild(QGroupBox, 'flowsGroupBox')
         self.functionsGroupBox = self.ui.findChild(
             QGroupBox, 'functionsGroupBox')
+        self.functionsTreeView = self.ui.findChild(
+            QTreeView, 'functionsTreeView')
         self.propertiesTableWidget = self.ui.findChild(
             QTableWidget, 'propertiesTableWidget')
         self.logViewer = self.ui.findChild(QPlainTextEdit, 'logViewer')
 
         self.ui.installEventFilter(self)
+        self.setup_functions_tree_view()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if watched is self.ui and event.type() == QEvent.Close:
@@ -114,18 +124,65 @@ class MainWindow(QMainWindow):
 
     def openProjectDialog(self, *args) -> Callable:
         pathStr = QFileDialog.getExistingDirectory(
-            self, 'Open project folder...', QDir.homePath())
+            self, 'Open project folder...', os.getcwd())
 
         project_path = Path(pathStr).absolute()
 
         if not project_path:
             return
 
-        settings = Settings(
+        self.settings = Settings(
             filePath=Settings.get_settings_path(project_path), load=True)
 
-        # TODO store project variable somewhere
-        project = Project.load(SettingsManager.get_instance(settings))
+        self.project = Project.load(
+            SettingsManager.get_instance(self.settings))
+
+        self.load_functions_from_project()
+
+    def setup_functions_tree_view(self):
+        view = self.functionsTreeView
+        view.setHeaderHidden(True)
+        view.setDragEnabled(True)
+
+    def load_functions_from_project(self):
+        logger = logging.getLogger(__name__)
+
+        model = self.functionsTreeView.model()
+        if not model:
+            model = QStandardItemModel()
+            self.functionsTreeView.setModel(model)
+
+        if model.hasChildren():
+            model.removeRows(0, model.rowCount())
+
+        if not self.project:
+            return
+
+        functions = self.project.functions
+        functions.sort(key=lambda fn: f'{fn.module}{fn.name}')
+
+        rootNode = model.invisibleRootItem()
+        items: Dict[str, TreeItem] = {}
+        for fn in functions:
+            module_path = fn.module.split('.')
+            current_path = ''
+            for path in module_path:
+                previous_path = current_path
+                if not previous_path:
+                    current_path = path
+                else:
+                    current_path = '.'.join([current_path, path])
+                if current_path not in items:
+                    node = TreeItem(text=path)
+                    items[current_path] = node
+                    if not previous_path:
+                        rootNode.appendRow(node)
+                    else:
+                        items[previous_path].appendRow(node)
+            node = TreeItem(text=fn.name, function=fn)
+            items[fn.module].appendRow(node)
+
+        self.functionsTreeView.collapseAll()
 
     def show(self) -> None:
         return self.ui.show()
