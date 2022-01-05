@@ -1,23 +1,23 @@
 # This Python file uses the following encoding: utf-8
+import inspect
 import logging
 import os
 from io import StringIO
 from pathlib import Path
 from typing import Callable, Dict
 
-from PySide6.QtGui import QStandardItemModel
-from blueprint.module_scanner import functions_scanner
+from blueprint.function import Function
 from blueprint.project import Project
-
 from blueprint.settings import Settings, SettingsManager
-from blueprint.ui.mainwindow.functions_tree import TreeItem
+from blueprint.ui.mainwindow.function_models import FnPropsCategoryItem, FnPropsPropItem, FnTreeItem
 from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from PySide6.QtCore import QEvent, QFile, QObject, Signal
+from PySide6.QtGui import QFont, QStandardItem, QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
-                               QMainWindow, QPlainTextEdit, QTableWidget, QTreeView,
-                               QWidget)
+                               QMainWindow, QPlainTextEdit, QTableView,
+                               QTreeView, QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
     flowsGroupBox: QGroupBox
     functionsGroupBox: QGroupBox
     functionsTreeView: QTreeView
-    propertiesTableWidget: QTableWidget
+    propertiesTreeView: QTreeView
     logViewer: QPlainTextEdit
 
     def __init__(self, settings: Settings, project: Project = None) -> None:
@@ -65,12 +65,13 @@ class MainWindow(QMainWindow):
             QGroupBox, 'functionsGroupBox')
         self.functionsTreeView = self.ui.findChild(
             QTreeView, 'functionsTreeView')
-        self.propertiesTableWidget = self.ui.findChild(
-            QTableWidget, 'propertiesTableWidget')
+        self.propertiesTreeView = self.ui.findChild(
+            QTreeView, 'propertiesTreeView')
         self.logViewer = self.ui.findChild(QPlainTextEdit, 'logViewer')
 
         self.ui.installEventFilter(self)
         self.setup_functions_tree_view()
+        self.setup_function_props_view()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if watched is self.ui and event.type() == QEvent.Close:
@@ -85,12 +86,12 @@ class MainWindow(QMainWindow):
             lambda _: QApplication.instance().quit())
 
         self.menu.signals.onOpenProjectRoot.connect(
-            self.openProjectDialog)
+            self.open_project_dialog)
 
     def init_ui(self) -> None:
         self.flowsGroupBox.setVisible(self.settings.ui.viewFlows)
         self.functionsGroupBox.setVisible(self.settings.ui.viewFunctions)
-        self.propertiesTableWidget.setVisible(
+        self.propertiesTreeView.setVisible(
             self.settings.ui.viewObjectProperties)
 
     def init_settingsEventHandlers(self) -> None:
@@ -99,12 +100,12 @@ class MainWindow(QMainWindow):
         self.settings.ui.viewFunctionsChanged.connect(
             lambda visible: self.functionsGroupBox.setVisible(visible))
         self.settings.ui.viewObjectPropertiesChanged.connect(
-            lambda visible: self.propertiesTableWidget.setVisible(visible))
+            lambda visible: self.propertiesTreeView.setVisible(visible))
 
-        self.settings.ui.viewFlowsChanged.connect(self.onViewHideEvent)
-        self.settings.ui.viewFunctionsChanged.connect(self.onViewHideEvent)
+        self.settings.ui.viewFlowsChanged.connect(self.on_view_hide_event)
+        self.settings.ui.viewFunctionsChanged.connect(self.on_view_hide_event)
         self.settings.ui.viewObjectPropertiesChanged.connect(
-            self.onViewHideEvent)
+            self.on_view_hide_event)
 
     def init_logger(self) -> None:
         logger = logging.getLogger()
@@ -115,14 +116,14 @@ class MainWindow(QMainWindow):
         handler = QPlainTextEditLogHandler(self.logViewer)
         logger.addHandler(handler)
 
-    def onViewHideEvent(self, *args) -> None:
+    def on_view_hide_event(self, *args) -> None:
         self.ui.findChild(QWidget, 'leftSideWidget').setVisible(
             self.settings.ui.viewFlows or self.settings.ui.viewFunctions)
 
         self.ui.findChild(QWidget, 'inspectorWidget').setVisible(
             self.settings.ui.viewObjectProperties)
 
-    def openProjectDialog(self, *args) -> Callable:
+    def open_project_dialog(self, *args) -> Callable:
         pathStr = QFileDialog.getExistingDirectory(
             self, 'Open project folder...', os.getcwd())
 
@@ -141,16 +142,24 @@ class MainWindow(QMainWindow):
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView
+        view.setModel(QStandardItemModel())
         view.setHeaderHidden(True)
         view.setDragEnabled(True)
 
-    def load_functions_from_project(self):
-        logger = logging.getLogger(__name__)
+        view.clicked.connect(lambda index: self.load_function_prop(
+            index.model().itemFromIndex(index).function))
 
+    def setup_function_props_view(self):
+        view = self.propertiesTreeView
+
+        model = QStandardItemModel()
+        model.setColumnCount(2)
+        model.setHorizontalHeaderLabels(['Category', 'Property', 'Value'])
+
+        view.setModel(model)
+
+    def load_functions_from_project(self):
         model = self.functionsTreeView.model()
-        if not model:
-            model = QStandardItemModel()
-            self.functionsTreeView.setModel(model)
 
         if model.hasChildren():
             model.removeRows(0, model.rowCount())
@@ -162,7 +171,7 @@ class MainWindow(QMainWindow):
         functions.sort(key=lambda fn: f'{fn.module}{fn.name}')
 
         rootNode = model.invisibleRootItem()
-        items: Dict[str, TreeItem] = {}
+        items: Dict[str, FnTreeItem] = {}
         for fn in functions:
             module_path = fn.module.split('.')
             current_path = ''
@@ -173,16 +182,43 @@ class MainWindow(QMainWindow):
                 else:
                     current_path = '.'.join([current_path, path])
                 if current_path not in items:
-                    node = TreeItem(text=path)
+                    node = FnTreeItem(text=path)
                     items[current_path] = node
                     if not previous_path:
                         rootNode.appendRow(node)
                     else:
                         items[previous_path].appendRow(node)
-            node = TreeItem(text=fn.name, function=fn)
+            node = FnTreeItem(text=fn.name, function=fn)
             items[fn.module].appendRow(node)
 
         self.functionsTreeView.collapseAll()
+
+    def load_function_prop(self, fn: Function) -> None:
+        model: QStandardItemModel = self.propertiesTreeView.model()
+
+        if model.hasChildren():
+            model.removeRows(0, model.rowCount())
+
+        rootItem = model.invisibleRootItem()
+
+        parameters = FnPropsCategoryItem('Params')
+        params = fn.signature.parameters
+        for param in params:
+            param = params[param]
+            required = param.default is inspect._empty
+            required_tooltip = 'Required' if required else None
+            type_str = str(
+                param.annotation) if param.annotation is not inspect._empty else ''
+
+            parameters.appendRow([
+                FnPropsPropItem(''),
+                FnPropsPropItem(('* ' if required else '') +
+                                param.name, required_tooltip),
+                FnPropsPropItem(type_str, type_str),
+            ])
+
+        rootItem.appendRow(parameters)
+        self.propertiesTreeView.expandAll()
 
     def show(self) -> None:
         return self.ui.show()
