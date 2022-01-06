@@ -9,15 +9,16 @@ from typing import Callable, Dict
 from blueprint.function import Function
 from blueprint.project import Project
 from blueprint.settings import Settings, SettingsManager
-from blueprint.ui.mainwindow.function_models import FnPropsCategoryItem, FnPropsPropItem, FnTreeItem
+from blueprint.ui.mainwindow.function_models import (FnPropsCategoryItem,
+                                                     FnPropsPropItem,
+                                                     FnTreeItem)
 from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from PySide6.QtCore import QEvent, QFile, QObject, Signal
-from PySide6.QtGui import QFont, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
-                               QMainWindow, QPlainTextEdit, QTableView,
-                               QTreeView, QWidget)
+                               QMainWindow, QPlainTextEdit, QTreeView, QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -218,6 +219,18 @@ class MainWindow(QMainWindow):
             ])
 
         rootItem.appendRow(parameters)
+
+        if fn.signature.return_annotation is not inspect._empty:
+            returns = FnPropsCategoryItem('Return')
+            annotation = str(fn.signature.return_annotation)
+            returns.appendRow([
+                FnPropsPropItem(''),
+                FnPropsPropItem('(return value)'),
+                FnPropsPropItem(annotation, annotation),
+            ])
+
+            rootItem.appendRow(returns)
+
         self.propertiesTreeView.expandAll()
 
     def show(self) -> None:
