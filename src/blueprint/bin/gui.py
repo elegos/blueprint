@@ -3,6 +3,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
+from PySide6.QtGui import QIcon
 
 from PySide6.QtWidgets import QApplication
 from blueprint.project import Project
@@ -38,6 +39,10 @@ def main():
         project = Project.load(SettingsManager.get_instance(settings))
 
     app = QApplication([])
+    icon = QIcon()
+    icon.addFile(str(Path(__file__).parent.parent.joinpath(
+        'ui', 'icons', 'blueprint-svgrepo-com.svg')))
+    app.setWindowIcon(icon)
     app.setQuitOnLastWindowClosed(False)
     widget = MainWindow(settings=settings, project=project)
     widget.load_functions_from_project()
