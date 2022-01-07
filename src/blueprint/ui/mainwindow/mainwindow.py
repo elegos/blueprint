@@ -14,10 +14,10 @@ from blueprint.ui.mainwindow.function_models import (FnPropsCategoryItem,
                                                      FnTreeItem)
 from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
-from PySide6.QtCore import QEvent, QFile, QObject, Signal
+from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
+from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox, QLineEdit,
                                QMainWindow, QPlainTextEdit, QTreeView, QWidget)
 
 
@@ -35,8 +35,12 @@ class MainWindow(QMainWindow):
     ui: QWidget
     menu: Menu
     flowsGroupBox: QGroupBox
+
     functionsGroupBox: QGroupBox
     functionsTreeView: QTreeView
+    functionsFilterLineEdit: QLineEdit
+    functionsFilter: str
+
     propertiesTreeView: QTreeView
     logViewer: QPlainTextEdit
 
@@ -62,16 +66,22 @@ class MainWindow(QMainWindow):
         ui_file.close()
 
         self.flowsGroupBox = self.ui.findChild(QGroupBox, 'flowsGroupBox')
+
         self.functionsGroupBox = self.ui.findChild(
             QGroupBox, 'functionsGroupBox')
         self.functionsTreeView = self.ui.findChild(
             QTreeView, 'functionsTreeView')
+        self.functionsFilterLineEdit = self.ui.findChild(
+            QLineEdit, 'functionsFilterLineEdit')
+        self.functionsFilter = ''
+
         self.propertiesTreeView = self.ui.findChild(
             QTreeView, 'propertiesTreeView')
         self.logViewer = self.ui.findChild(QPlainTextEdit, 'logViewer')
 
         self.ui.installEventFilter(self)
         self.setup_functions_tree_view()
+        self.setup_functions_filter()
         self.setup_function_props_view()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
@@ -124,6 +134,10 @@ class MainWindow(QMainWindow):
         self.ui.findChild(QWidget, 'inspectorWidget').setVisible(
             self.settings.ui.viewObjectProperties)
 
+    def on_functions_filter_edit(self, *args) -> None:
+        self.functionsFilter = self.functionsFilterLineEdit.text()
+        self.load_functions_from_project()
+
     def open_project_dialog(self, *args) -> Callable:
         pathStr = QFileDialog.getExistingDirectory(
             self, 'Open project folder...', os.getcwd())
@@ -150,6 +164,15 @@ class MainWindow(QMainWindow):
         view.clicked.connect(lambda index: self.load_function_prop(
             index.model().itemFromIndex(index).function))
 
+    def setup_functions_filter(self):
+        functions_timer = QTimer(self)
+        functions_timer.setSingleShot(True)
+        functions_timer.setInterval(300)
+        functions_timer.timeout.connect(self.on_functions_filter_edit)
+
+        self.functionsFilterLineEdit.textChanged.connect(
+            lambda: functions_timer.start())
+
     def setup_function_props_view(self):
         view = self.propertiesTreeView
 
@@ -169,10 +192,14 @@ class MainWindow(QMainWindow):
             return
 
         functions = self.project.functions
+        if self.functionsFilter:
+            functions = list(filter(
+                lambda fn: self.functionsFilter in f'{fn.module}.{fn.name}', functions))
         functions.sort(key=lambda fn: f'{fn.module}{fn.name}')
 
         rootNode = model.invisibleRootItem()
         items: Dict[str, FnTreeItem] = {}
+
         for fn in functions:
             module_path = fn.module.split('.')
             current_path = ''
