@@ -4,6 +4,7 @@ import logging
 import os
 from io import StringIO
 from pathlib import Path
+from threading import Thread
 from typing import Callable, Dict
 
 from blueprint.function import Function
@@ -18,7 +19,7 @@ from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox, QLineEdit,
-                               QMainWindow, QPlainTextEdit, QTreeView, QWidget)
+                               QMainWindow, QPlainTextEdit, QStatusBar, QTreeView, QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -40,6 +41,8 @@ class MainWindow(QMainWindow):
     functionsTreeView: QTreeView
     functionsFilterLineEdit: QLineEdit
     functionsFilter: str
+
+    status_bar: QStatusBar
 
     propertiesTreeView: QTreeView
     logViewer: QPlainTextEdit
@@ -78,6 +81,8 @@ class MainWindow(QMainWindow):
         self.propertiesTreeView = self.ui.findChild(
             QTreeView, 'propertiesTreeView')
         self.logViewer = self.ui.findChild(QPlainTextEdit, 'logViewer')
+
+        self.status_bar = self.ui.findChild(QStatusBar, 'statusbar')
 
         self.ui.installEventFilter(self)
         self.setup_functions_tree_view()
@@ -127,6 +132,8 @@ class MainWindow(QMainWindow):
         handler = QPlainTextEditLogHandler(self.logViewer)
         logger.addHandler(handler)
 
+        logging.getLogger('UI').debug('Logger initialized')
+
     def on_view_hide_event(self, *args) -> None:
         self.ui.findChild(QWidget, 'leftSideWidget').setVisible(
             self.settings.ui.viewFlows or self.settings.ui.viewFunctions)
@@ -136,6 +143,14 @@ class MainWindow(QMainWindow):
 
     def on_functions_filter_edit(self, *args) -> None:
         self.functionsFilter = self.functionsFilterLineEdit.text()
+        self.load_functions_from_project()
+
+    def load_project(self):
+        self.status_bar.showMessage('Loading project...')
+        manager = SettingsManager.get_instance(self.settings)
+        self.project = Project.load(manager)
+
+        self.status_bar.showMessage('Project loaded', 5000)
         self.load_functions_from_project()
 
     def open_project_dialog(self, *args) -> Callable:
@@ -150,10 +165,9 @@ class MainWindow(QMainWindow):
         self.settings = Settings(
             filePath=Settings.get_settings_path(project_path), load=True)
 
-        self.project = Project.load(
-            SettingsManager.get_instance(self.settings))
-
-        self.load_functions_from_project()
+        self.project_load_thread = Thread(
+            target=self.load_project)
+        self.project_load_thread.start()
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView

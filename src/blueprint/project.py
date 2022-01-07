@@ -19,15 +19,18 @@ class Project:
         if not project_root:
             return
 
-        # TODO manage functions filter
         functions = functions_scanner(project_root)
         # TODO load existing flows
         flows = []
 
-        return Project(settings_manager=settings_manager, functions=functions, flows=flows)
+        return Project(
+            settings_manager=settings_manager,
+            functions=functions,
+            flows=flows
+        )
 
-    def __init__(self, settings_manager: SettingsManager, functions: List[Function], flows=List):
-        self.settings_manager = settings_manager,
+    def __init__(self, settings_manager: SettingsManager, functions: List[Function], flows: List):
+        self.settings_manager = settings_manager
         self.functions = functions
         self.flows = flows
 
