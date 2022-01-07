@@ -1,16 +1,14 @@
 import logging
+import sys
 from configparser import ConfigParser
 from importlib import import_module
 from inspect import getmembers, isfunction, signature
 from os import sep
 from pathlib import Path
 from pkgutil import iter_modules
-import sys
-from typing import AnyStr, List, Optional, Pattern, Set, Union
+from typing import List, Optional, Pattern, Union
 
-import pkg_resources
 from setuptools import find_packages
-from importlib import metadata
 
 from blueprint.function import Function
 
@@ -33,6 +31,35 @@ def get_package_modules(package_name: Path, pattern: Optional[Pattern]) -> List[
         pass
 
     return result
+
+
+def get_top_level_packages(distribution_name: str) -> List[str]:
+    top_level = []
+    if sys.version_info[0] == 3 and sys.version_info[1] < 8:
+        from pkg_resources import get_distribution
+
+        dist = get_distribution(distribution_name)
+        if not dist.has_metadata('top_level.txt'):
+            logging.getLogger(__name__).warning(
+                "Unable to locate distribution's top_level.txt")
+
+            return top_level
+        top_level = list(filter(lambda x: not not x,
+                                dist.get_metadata('top_level.txt').split('\n')))
+    else:
+        # Python 3.8+
+        from importlib import metadata
+        init_files = [(len(str(path).split('/')), path) for path in metadata.distribution(
+            distribution_name).files if str(path).endswith('__init__.py')]
+
+        if init_files:
+            min_path = min(init_files, key=lambda x: x[0])[0]
+            top_level = ['.'.join(str(ppath[1]).split('/')[:-1])
+                         for ppath in init_files if ppath[0] == min_path]
+
+    logging.getLogger(__name__).debug(top_level)
+
+    return top_level
 
 
 def functions_scanner(
@@ -60,17 +87,11 @@ def functions_scanner(
         parser = ConfigParser()
         parser.read(pipfilePath)
         if parser.has_section('packages'):
-            for package_name in parser['packages'].keys():
-                init_files = [(len(str(path).split('/')), path) for path in metadata.distribution(
-                    package_name).files if str(path).endswith('__init__.py')]
+            for distribution_name in parser['packages'].keys():
+                top_level_packages = get_top_level_packages(distribution_name)
 
-                if init_files:
-                    min_path = min(init_files, key=lambda x: x[0])[0]
-                    top_level_packages = ['.'.join(str(ppath[1]).split('/')[:-1])
-                                          for ppath in init_files if ppath[0] == min_path]
-
-                    for top_level in top_level_packages:
-                        modules.extend(get_package_modules(top_level, pattern))
+                for top_level in top_level_packages:
+                    modules.extend(get_package_modules(top_level, pattern))
 
     elif requirementsPath.exists():
         moduleNameRe = compile(r'^([^~=<>]+)')
@@ -80,8 +101,8 @@ def functions_scanner(
                 matches = moduleNameRe.match(line.strip())
                 if not matches:
                     continue
-                package_name = matches[1]
-                modules.append(get_package_modules(package_name))
+                distribution_name = matches[1]
+                modules.append(get_package_modules(distribution_name))
 
     result: List[Function] = []
     try:
