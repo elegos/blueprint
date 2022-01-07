@@ -7,19 +7,19 @@ from pathlib import Path
 from threading import Thread
 from typing import Callable, Dict
 
-from blueprint.function import Function
-from blueprint.project import Project
+from blueprint.model_functions import load_project
+from blueprint.models import Function, Project
 from blueprint.settings import Settings, SettingsManager
-from blueprint.ui.mainwindow.function_models import (FnPropsCategoryItem,
-                                                     FnPropsPropItem,
-                                                     FnTreeItem)
 from blueprint.ui.mainwindow.menu import Menu
+from blueprint.ui.models import (FnPropsCategoryItem, FnPropsPropItem,
+                                 FnTreeItem)
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox, QLineEdit,
-                               QMainWindow, QPlainTextEdit, QStatusBar, QTreeView, QWidget)
+                               QMainWindow, QPlainTextEdit, QStatusBar,
+                               QTreeView, QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -147,8 +147,7 @@ class MainWindow(QMainWindow):
 
     def load_project(self):
         self.status_bar.showMessage('Loading project...')
-        manager = SettingsManager.get_instance(self.settings)
-        self.project = Project.load(manager)
+        self.project = load_project(self.settings)
 
         self.status_bar.showMessage('Project loaded', 5000)
         self.load_functions_from_project()

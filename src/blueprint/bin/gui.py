@@ -6,7 +6,8 @@ from typing import Optional
 from PySide6.QtGui import QIcon
 
 from PySide6.QtWidgets import QApplication
-from blueprint.project import Project
+from blueprint.model_functions import load_project
+from blueprint.models import Project
 
 from blueprint.settings import Settings, SettingsManager
 from blueprint.ui.mainwindow.mainwindow import MainWindow
@@ -36,7 +37,7 @@ def main():
     settings = Settings(filePath=settingsFilePath, load=True)
     project = None
     if settings.get_project_root():
-        project = Project.load(SettingsManager.get_instance(settings))
+        project = load_project(settings)
 
     app = QApplication([])
     icon = QIcon()

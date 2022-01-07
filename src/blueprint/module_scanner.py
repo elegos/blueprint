@@ -10,7 +10,7 @@ from typing import List, Optional, Pattern, Union
 
 from setuptools import find_packages
 
-from blueprint.function import Function
+from blueprint.models import Function
 
 
 def get_package_modules(package_name: Path, pattern: Optional[Pattern]) -> List[str]:
@@ -130,11 +130,11 @@ def functions_scanner(
                                  signature=signature(fn[1])))
 
             except ImportError as ex:
-                logging.getLogger('module_scanner').error(
+                logging.getLogger(__name__).error(
                     f'Error loading package {module}: {ex.msg}'
                 )
     except ModuleNotFoundError as ex:
-        logging.getLogger('module_scanner').error(
+        logging.getLogger(__name__).error(
             f'{ex.msg}\n'
             + '\nYou are either missing it in your system,'
             + ' or you are using the scanner outside its virtual environment.\n'

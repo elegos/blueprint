@@ -1,6 +1,6 @@
 from typing import Optional
 from PySide6.QtGui import QFont, QStandardItem
-from blueprint.function import Function
+from blueprint.models import Function
 
 
 class FnTreeItem(QStandardItem):
