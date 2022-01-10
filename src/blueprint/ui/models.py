@@ -1,6 +1,6 @@
 from typing import Optional
 from PySide6.QtGui import QFont, QStandardItem
-from blueprint.models import Function
+from blueprint.models import Flow, Function
 
 
 class FnTreeItem(QStandardItem):
@@ -35,3 +35,15 @@ class FnPropsCategoryItem(FnPropsPropItem):
         font.setBold(True)
 
         self.setFont(font)
+
+
+class FlowListItem(QStandardItem):
+    flow: Flow
+
+    def __init__(self, flow: Flow) -> None:
+        super().__init__()
+
+        self.flow = flow
+
+        self.setText(self.flow.name)
+        self.setEditable(True)

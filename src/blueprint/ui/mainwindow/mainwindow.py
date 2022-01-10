@@ -8,18 +8,20 @@ from threading import Thread
 from typing import Callable, Dict
 
 from blueprint.model_functions import load_project
-from blueprint.models import Function, Project
+from blueprint.models import Flow, Function, Project
 from blueprint.settings import Settings, SettingsManager
 from blueprint.ui.mainwindow.menu import Menu
-from blueprint.ui.models import (FnPropsCategoryItem, FnPropsPropItem,
+from blueprint.ui.models import (FlowListItem, FnPropsCategoryItem, FnPropsPropItem,
                                  FnTreeItem)
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
-from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
+from PySide6 import QtCore
+from PySide6.QtCore import QEvent, QFile, QModelIndex, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox, QLineEdit,
-                               QMainWindow, QPlainTextEdit, QStatusBar,
-                               QTreeView, QWidget)
+from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
+                               QInputDialog, QLineEdit, QListView, QMainWindow,
+                               QMessageBox, QPlainTextEdit, QPushButton,
+                               QStatusBar, QTreeView, QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -41,6 +43,10 @@ class MainWindow(QMainWindow):
     functionsTreeView: QTreeView
     functionsFilterLineEdit: QLineEdit
     functionsFilter: str
+
+    flowsListView: QListView
+    newFlowPushButton: QPushButton
+    deleteFlowPushButton: QPushButton
 
     status_bar: QStatusBar
 
@@ -82,9 +88,17 @@ class MainWindow(QMainWindow):
             QTreeView, 'propertiesTreeView')
         self.logViewer = self.ui.findChild(QPlainTextEdit, 'logViewer')
 
+        self.flowsListView = self.ui.findChild(
+            QListView, 'flowsListView')
+        self.newFlowPushButton = self.ui.findChild(
+            QPushButton, 'newFlowPushButton')
+        self.deleteFlowPushButton = self.ui.findChild(
+            QPushButton, 'deleteFlowPushButton')
+
         self.status_bar = self.ui.findChild(QStatusBar, 'statusbar')
 
         self.ui.installEventFilter(self)
+        self.setup_flows_management_ui()
         self.setup_functions_tree_view()
         self.setup_functions_filter()
         self.setup_function_props_view()
@@ -151,6 +165,7 @@ class MainWindow(QMainWindow):
 
         self.status_bar.showMessage('Project loaded', 5000)
         self.load_functions_from_project()
+        self.load_flows_from_project()
 
     def open_project_dialog(self, *args) -> Callable:
         pathStr = QFileDialog.getExistingDirectory(
@@ -167,6 +182,89 @@ class MainWindow(QMainWindow):
         self.project_load_thread = Thread(
             target=self.load_project)
         self.project_load_thread.start()
+
+    def on_new_flow(self, *args):
+        logger = logging.getLogger('on_new_flow')
+
+        dialog = QInputDialog(self)
+        name = ''
+        name, ok = dialog.getText(self, 'Add new flow', 'Flow name:')
+        existing_flow = next(
+            (flow for flow in self.project.flows if flow.name == name), None)
+
+        if ok:
+            if name and not existing_flow:
+                flow = Flow(name=name, nodes=[])
+                self.project.flows.append(flow)
+                self.project.flows.sort(key=lambda flow: flow.name)
+
+                self.load_flows_from_project()
+
+            if not name or existing_flow:
+                error_dialog = QMessageBox(dialog)
+                error_dialog.setWindowTitle('New flow error')
+                error_dialog.setWindowModality(
+                    QtCore.Qt.WindowModality.ApplicationModal)
+                error_dialog.setText(
+                    'A flow must have a unique, non-empty name.')
+
+                def on_close():
+                    error_dialog.close()
+                    self.on_new_flow()
+
+                error_dialog.buttonClicked.connect(on_close)
+
+                error_dialog.show()
+
+    def on_flow_delete(self, *args):
+        logger = logging.getLogger('on_flow_delete')
+
+        logger.debug('TODO')
+
+    def on_flow_edit(self, *args):
+        logger = logging.getLogger('on_flow_edit')
+
+        logger.debug('TODO')
+
+    def on_flow_item_changed(self, item: FlowListItem):
+        logger = logging.getLogger('on_flow_item_changed')
+
+        existing_flow = next(
+            (flow for flow in self.project.flows if flow.uid == item.flow.uid))
+        new_name = item.text()
+
+        if new_name == existing_flow.name:
+            return
+
+        other_existing_flow = next(
+            (flow for flow in self.project.flows if flow.name ==
+             new_name and flow != existing_flow),
+            None
+        )
+
+        if not new_name or other_existing_flow:
+            self.status_bar.showMessage(
+                'Flow name must be non-empty and unique.', 5000)
+            item.setText(existing_flow.name)
+
+            return
+
+        existing_flow.name = new_name
+        logger.debug('TODO: save flow on name change')
+
+    def setup_flows_management_ui(self):
+        self.newFlowPushButton.clicked.connect(self.on_new_flow)
+        self.deleteFlowPushButton.clicked.connect(self.on_flow_delete)
+
+        list_model = QStandardItemModel()
+        self.flowsListView.setModel(list_model)
+        list_model.itemChanged.connect(self.on_flow_item_changed)
+
+        if not self.project:
+            self.newFlowPushButton.setEnabled(False)
+            self.deleteFlowPushButton.setEnabled(False)
+
+        self.load_flows_from_project()
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView
@@ -194,6 +292,28 @@ class MainWindow(QMainWindow):
         model.setHorizontalHeaderLabels(['Category', 'Property', 'Value'])
 
         view.setModel(model)
+
+    def load_flows_from_project(self):
+        logger = logging.getLogger('load_flows_from_project')
+
+        model: QStandardItemModel = self.flowsListView.model()
+        if model.hasChildren():
+            model.removeRows(0, model.rowCount())
+
+        if not self.project:
+            self.newFlowPushButton.setEnabled(False)
+            self.deleteFlowPushButton.setEnabled(False)
+
+            return
+
+        rootNode = model.invisibleRootItem()
+        for flow in self.project.flows:
+            rootNode.appendRow(FlowListItem(flow))
+
+        logger.debug('TODO (on double click)')
+
+        self.newFlowPushButton.setEnabled(True)
+        self.deleteFlowPushButton.setEnabled(True)
 
     def load_functions_from_project(self):
         model = self.functionsTreeView.model()

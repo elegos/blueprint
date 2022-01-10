@@ -1,6 +1,6 @@
 from blueprint.models import Project
 from blueprint.module_scanner import functions_scanner
-from blueprint.settings import Settings, SettingsManager
+from blueprint.settings import Settings
 
 
 def load_project(settings: Settings) -> Project:
