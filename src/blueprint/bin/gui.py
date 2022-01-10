@@ -7,9 +7,8 @@ from PySide6.QtGui import QIcon
 
 from PySide6.QtWidgets import QApplication
 from blueprint.model_functions import load_project
-from blueprint.models import Project
 
-from blueprint.settings import Settings, SettingsManager
+from blueprint.settings import Settings
 from blueprint.ui.mainwindow.mainwindow import MainWindow
 
 
