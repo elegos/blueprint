@@ -6,6 +6,8 @@ from typing import Any, Optional, Type, TypeVar
 
 import yaml
 
+from blueprint.decorators import autoemit
+
 try:
     from yaml import CDumper as Dumper
     from yaml import CLoader as Loader
@@ -16,21 +18,6 @@ from PySide6.QtCore import QObject, Signal, SignalInstance
 
 BLUEPRINT_FOLDER_NAME = '.blueprint'
 T = TypeVar('T')
-
-
-def autoemit(name: str, type: T) -> T:
-    attr_name = f'__{name}'
-    signal_attr_name = f'{name}Changed'
-
-    def getter(self) -> T:
-        return getattr(self, attr_name)
-
-    def setter(self, new_value: T):
-        setattr(self, attr_name, new_value)
-
-        getattr(self, signal_attr_name).emit(new_value)
-
-    return property(getter, setter)
 
 
 class DictConvertible:
@@ -72,10 +59,10 @@ class UI(QObject, DictConvertible):
     viewFunctionsChanged = Signal(bool)
     viewObjectPropertiesChanged = Signal(bool)
 
-    viewFlows = autoemit('viewFlows', bool)
-    viewFunctions = autoemit('viewFunctions', bool)
+    viewFlows = autoemit('viewFlows', 'viewFlowsChanged', bool)
+    viewFunctions = autoemit('viewFunctions', 'viewFunctionsChanged', bool)
     viewObjectProperties = autoemit(
-        'viewObjectProperties', bool)
+        'viewObjectProperties', 'viewObjectPropertiesChanged', bool)
 
     def __init__(
         self, parent: Optional[QObject] = None, viewFlows: bool = True, viewFunctions: bool = True, viewObjectProperties: bool = True
