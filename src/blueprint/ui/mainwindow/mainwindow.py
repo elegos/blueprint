@@ -9,13 +9,13 @@ from typing import Callable, Dict
 
 from blueprint.model_functions import load_project
 from blueprint.models import Flow, Function, Project
-from blueprint.settings import Settings, SettingsManager
+from blueprint.settings import Settings
 from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.models import (FlowListItem, FnPropsCategoryItem, FnPropsPropItem,
-                                 FnTreeItem)
+                                 FnTreeItem, FnTreeView)
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
 from PySide6 import QtCore
-from PySide6.QtCore import QEvent, QFile, QModelIndex, QObject, QTimer, Signal
+from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
     flowsGroupBox: QGroupBox
 
     functionsGroupBox: QGroupBox
-    functionsTreeView: QTreeView
+    functionsTreeView: FnTreeView
     functionsFilterLineEdit: QLineEdit
     functionsFilter: str
 
@@ -78,8 +78,17 @@ class MainWindow(QMainWindow):
 
         self.functionsGroupBox = self.ui.findChild(
             QGroupBox, 'functionsGroupBox')
-        self.functionsTreeView = self.ui.findChild(
+
+        # Can't load a custom component from .ui files.
+        # Replace the placeholder with the real widget.
+        fnViewPlaceholder: QTreeView = self.ui.findChild(
             QTreeView, 'functionsTreeView')
+        fnTreeViewParent: QWidget = fnViewPlaceholder.parent()
+        self.functionsTreeView = FnTreeView(parent=fnTreeViewParent)
+        fnTreeViewParent.layout().replaceWidget(
+            fnViewPlaceholder, self.functionsTreeView)
+        fnViewPlaceholder.deleteLater()
+
         self.functionsFilterLineEdit = self.ui.findChild(
             QLineEdit, 'functionsFilterLineEdit')
         self.functionsFilter = ''
@@ -355,6 +364,9 @@ class MainWindow(QMainWindow):
         self.functionsTreeView.collapseAll()
 
     def load_function_prop(self, fn: Function) -> None:
+        if not fn:
+            return
+
         model: QStandardItemModel = self.propertiesTreeView.model()
 
         if model.hasChildren():
