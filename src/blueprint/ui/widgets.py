@@ -21,39 +21,23 @@ class FnTreeView(QTreeView):
 
 
 class BlueprintGraphicsView(QGraphicsView):
-    svg_renderer: QSvgRenderer
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         svg_data = Path(__file__).parent.joinpath(
             'images', 'background', 'graph-paper.svg').read_bytes()
         background_content = QtCore.QByteArray(svg_data)
-        self.svg_renderer = QSvgRenderer(background_content)
-        self.svg_renderer.setAspectRatioMode(
+        svg_renderer = QSvgRenderer(background_content)
+        svg_renderer.setAspectRatioMode(
             QtCore.Qt.AspectRatioMode.KeepAspectRatio)
 
-    def drawBackground(self, painter: QtGui.QPainter, rect: Union[QtCore.QRectF, QtCore.QRect]) -> None:
-        pattern_size = self.svg_renderer.defaultSize()
-        p_width = pattern_size.width()
-        p_height = pattern_size.height()
+        brush_pixmap = QtGui.QPixmap(svg_renderer.defaultSize())
 
-        left_steps = math.ceil(rect.width() / pattern_size.width())
-        top_steps = math.ceil(rect.height() / pattern_size.height())
+        brush_painter = QtGui.QPainter(brush_pixmap)
+        svg_renderer.render(brush_painter, brush_pixmap.rect())
+        brush_painter.end()
 
-        for w in range(0, left_steps):
-            for h in range(0, top_steps):
-                left = w * p_width
-                top = h * p_height
-                for top_multiplier in [1, -1]:
-                    for left_multiplier in [1, -1]:
-                        rect = QtCore.QRect()
-                        rect.setTop(top_multiplier * top)
-                        rect.setLeft(left_multiplier * left)
-                        rect.setWidth(p_width)
-                        rect.setHeight(p_height)
-
-                        self.svg_renderer.render(painter, rect)
+        self.setBackgroundBrush(QtGui.QBrush(brush_pixmap))
 
 
 class GraphWidget(QWidget):

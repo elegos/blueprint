@@ -287,20 +287,19 @@ class MainWindow(QMainWindow):
 
     def setup_flows_tab_group(self):
         # DEMO
-        example_scene = QGraphicsScene()
+        example_scene = QGraphicsScene(self)
         pen = QtGui.QPen(QtGui.Qt.GlobalColor.yellow)
         brush = QtGui.QBrush(QtGui.Qt.GlobalColor.red)
         example_scene.addRect(5, 5, 100, 100, pen, brush)
 
-        # self.graphics_view = BlueprintGraphicsView(example_scene)
-        self.graphics_view = QGraphicsView(example_scene)
+        self.graphics_view = BlueprintGraphicsView(example_scene)
         self.graphics_view.setObjectName('The view')
         self.graphics_view.show()
         self.blueprintsTabWidget.addTab(
             self.graphics_view, 'GraphicsView demo')
-        # fn = Function('module.name', 'name', None)
-        # self.blueprintsTabWidget.addTab(
-        #     FunctionWidget(fn), 'FunctionWidget demo')
+        fn = Function('module.name', 'name', None)
+        self.blueprintsTabWidget.addTab(
+            FunctionWidget(fn), 'FunctionWidget demo')
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView
