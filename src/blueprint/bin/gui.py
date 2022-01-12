@@ -3,6 +3,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
+from PySide6 import QtCore
 from PySide6.QtGui import QIcon
 
 from PySide6.QtWidgets import QApplication
@@ -10,6 +11,21 @@ from blueprint.model_functions import load_project
 
 from blueprint.settings import Settings
 from blueprint.ui.mainwindow.mainwindow import MainWindow
+
+
+class WhatsUnderMouse(QtCore.QObject):
+    logger: logging.Logger
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.logger = logging.getLogger(__class__.__name__)
+
+    def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent) -> bool:
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            click_name = watched.objectName().strip() or type(watched)
+            self.logger.debug(click_name)
+
+        return super().eventFilter(watched, event)
 
 
 def main():
@@ -39,9 +55,12 @@ def main():
         project = load_project(settings)
 
     app = QApplication([])
+    if args.log_level.lower() == 'debug':
+        mouseEventFilter = WhatsUnderMouse()
+        app.installEventFilter(mouseEventFilter)
     icon = QIcon()
     icon.addFile(str(Path(__file__).parent.parent.joinpath(
-        'ui', 'icons', 'blueprint-svgrepo-com.svg')))
+        'ui', 'images', 'icons', 'blueprint-icon.svg')))
     app.setWindowIcon(icon)
     app.setQuitOnLastWindowClosed(False)
     widget = MainWindow(settings=settings, project=project)

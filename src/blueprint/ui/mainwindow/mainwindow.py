@@ -2,6 +2,7 @@
 import inspect
 import logging
 import os
+import time
 from io import StringIO
 from pathlib import Path
 from threading import Thread
@@ -11,17 +12,19 @@ from blueprint.model_functions import load_project
 from blueprint.models import Flow, Function, Project
 from blueprint.settings import Settings
 from blueprint.ui.mainwindow.menu import Menu
-from blueprint.ui.models import (FlowListItem, FnPropsCategoryItem, FnPropsPropItem,
-                                 FnTreeItem, FnTreeView)
+from blueprint.ui.models import (FlowListItem, FnPropsCategoryItem,
+                                 FnPropsPropItem, FnTreeItem)
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
-from PySide6 import QtCore
+from blueprint.ui.widgets import BlueprintGraphicsView, FnTreeView, FunctionWidget
+from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
-                               QInputDialog, QLineEdit, QListView, QMainWindow,
-                               QMessageBox, QPlainTextEdit, QPushButton,
-                               QStatusBar, QTreeView, QWidget)
+from PySide6.QtWidgets import (QApplication, QFileDialog, QGraphicsScene,
+                               QGraphicsView, QGroupBox, QInputDialog,
+                               QLineEdit, QListView, QMainWindow, QMessageBox,
+                               QPlainTextEdit, QPushButton, QStatusBar,
+                               QTabWidget, QTreeView, QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -47,6 +50,8 @@ class MainWindow(QMainWindow):
     flowsListView: QListView
     newFlowPushButton: QPushButton
     deleteFlowPushButton: QPushButton
+
+    blueprintsTabWidget: QTabWidget
 
     status_bar: QStatusBar
 
@@ -104,10 +109,15 @@ class MainWindow(QMainWindow):
         self.deleteFlowPushButton = self.ui.findChild(
             QPushButton, 'deleteFlowPushButton')
 
+        self.blueprintsTabWidget = self.ui.findChild(
+            QTabWidget, 'blueprintsTabWidget'
+        )
+
         self.status_bar = self.ui.findChild(QStatusBar, 'statusbar')
 
         self.ui.installEventFilter(self)
         self.setup_flows_management_ui()
+        self.setup_flows_tab_group()
         self.setup_functions_tree_view()
         self.setup_functions_filter()
         self.setup_function_props_view()
@@ -274,6 +284,23 @@ class MainWindow(QMainWindow):
             self.deleteFlowPushButton.setEnabled(False)
 
         self.load_flows_from_project()
+
+    def setup_flows_tab_group(self):
+        # DEMO
+        example_scene = QGraphicsScene()
+        pen = QtGui.QPen(QtGui.Qt.GlobalColor.yellow)
+        brush = QtGui.QBrush(QtGui.Qt.GlobalColor.red)
+        example_scene.addRect(5, 5, 100, 100, pen, brush)
+
+        # self.graphics_view = BlueprintGraphicsView(example_scene)
+        self.graphics_view = QGraphicsView(example_scene)
+        self.graphics_view.setObjectName('The view')
+        self.graphics_view.show()
+        self.blueprintsTabWidget.addTab(
+            self.graphics_view, 'GraphicsView demo')
+        # fn = Function('module.name', 'name', None)
+        # self.blueprintsTabWidget.addTab(
+        #     FunctionWidget(fn), 'FunctionWidget demo')
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView

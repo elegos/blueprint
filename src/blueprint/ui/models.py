@@ -1,17 +1,6 @@
-import logging
 from typing import Optional
-from PySide6 import QtCore
 from PySide6.QtGui import QFont, QStandardItem
-from PySide6.QtWidgets import QTreeView
 from blueprint.models import Flow, Function
-
-
-class FnTreeView(QTreeView):
-    def startDrag(self, supportedActions: QtCore.Qt.DropActions) -> None:
-        logging.getLogger(f'{__class__.__name__}::startDrag').debug(
-            'TODO QPixmap replace')
-
-        return super().startDrag(supportedActions)
 
 
 class FnTreeItem(QStandardItem):
