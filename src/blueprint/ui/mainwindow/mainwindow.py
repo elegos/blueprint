@@ -15,16 +15,17 @@ from blueprint.ui.mainwindow.menu import Menu
 from blueprint.ui.models import (FlowListItem, FnPropsCategoryItem,
                                  FnPropsPropItem, FnTreeItem)
 from blueprint.ui.qplaintextedit_log_handler import QPlainTextEditLogHandler
-from blueprint.ui.widgets import BlueprintGraphicsView, FnTreeView, FunctionWidget
+from blueprint.ui.widgets import (BlueprintGraphicsView, FnTreeView,
+                                  FunctionGraphicWidget)
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QEvent, QFile, QObject, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGraphicsScene,
-                               QGraphicsView, QGroupBox, QInputDialog,
-                               QLineEdit, QListView, QMainWindow, QMessageBox,
-                               QPlainTextEdit, QPushButton, QStatusBar,
-                               QTabWidget, QTreeView, QWidget)
+                               QGroupBox, QInputDialog, QLineEdit, QListView,
+                               QMainWindow, QMessageBox, QPlainTextEdit,
+                               QPushButton, QStatusBar, QTabWidget, QTreeView,
+                               QWidget)
 
 
 class MainWindowSignals(QObject):
@@ -295,11 +296,13 @@ class MainWindow(QMainWindow):
         self.graphics_view = BlueprintGraphicsView(example_scene)
         self.graphics_view.setObjectName('The view')
         self.graphics_view.show()
+
+        fn = Function('module.name', 'name', None)
+
+        self.blueprintsTabWidget.addTab(
+            FunctionGraphicWidget(fn), 'FunctionWidget demo')
         self.blueprintsTabWidget.addTab(
             self.graphics_view, 'GraphicsView demo')
-        fn = Function('module.name', 'name', None)
-        self.blueprintsTabWidget.addTab(
-            FunctionWidget(fn), 'FunctionWidget demo')
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView

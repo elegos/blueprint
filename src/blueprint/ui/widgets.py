@@ -65,7 +65,9 @@ class GraphWidget(QWidget):
         self.setWindowOpacity(0.8)
 
         widget_layout = QVBoxLayout()
+        widget_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(widget_layout)
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.header = QFrame(self)
         self.header.setObjectName('header')
@@ -108,7 +110,7 @@ class GraphWidget(QWidget):
         self._subheader_label.setText(subtitle)
 
 
-class FunctionWidget(GraphWidget):
+class FunctionGraphicWidget(GraphWidget):
     fn: Function
 
     def __init__(self, function: Function, parent: Optional[QWidget] = None, *args, **kwargs) -> None:
@@ -124,40 +126,42 @@ class FunctionWidget(GraphWidget):
         self.setSubtitle(self.fn.module)
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         self.central_widget.setLayout(layout)
 
         frame_size_policy = QSizePolicy()
         frame_size_policy.setVerticalPolicy(QSizePolicy.Policy.Minimum)
         frame_size_policy.setHorizontalPolicy(QSizePolicy.Policy.Maximum)
 
-        inputsFrame = QFrame(self.central_widget)
-        inputsFrame.setObjectName('inputs_frame')
-        inputsFrame.setSizePolicy(frame_size_policy)
-        inputsLayout = QVBoxLayout()
-        inputsFrame.setLayout(inputsLayout)
-        layout.addWidget(inputsFrame)
+        inputs_frame = QFrame(self.central_widget)
+        inputs_frame.setObjectName('inputs_frame')
+        inputs_frame.setSizePolicy(frame_size_policy)
+        inputs_frame.setContentsMargins(0, 0, 0, 0)
+        inputs_layout = QVBoxLayout()
+        inputs_frame.setLayout(inputs_layout)
+        layout.addWidget(inputs_frame)
 
-        spacer = QSpacerItem(9999, 9999, hData=QSizePolicy.Minimum,
-                             vData=QSizePolicy.Minimum)
+        spacer = QSpacerItem(0, 0, hData=QSizePolicy.Expanding,
+                             vData=QSizePolicy.Expanding)
         layout.addItem(spacer)
 
-        outputsFrame = QFrame(self.central_widget)
-        outputsFrame.setObjectName('outputs_frame')
-        outputsFrame.setSizePolicy(frame_size_policy)
-        outputsLayout = QVBoxLayout()
-        outputsFrame.setLayout(outputsLayout)
-        layout.addWidget(outputsFrame)
+        outputs_frame = QFrame(self.central_widget)
+        outputs_frame.setObjectName('outputs_frame')
+        outputs_frame.setSizePolicy(frame_size_policy)
+        outputs_layout = QVBoxLayout()
+        outputs_frame.setLayout(outputs_layout)
+        layout.addWidget(outputs_frame)
 
         test_label = QLabel()
         test_label.setText('TEST LEFT')
-        inputsLayout.addWidget(test_label)
-        inputsFrame.setStyleSheet('''
+        inputs_layout.addWidget(test_label)
+        inputs_frame.setStyleSheet('''
             #inputs_frame { background-color: blue; }
         ''')
 
         test_label = QLabel()
         test_label.setText('TEST RIGHT')
-        outputsLayout.addWidget(test_label)
-        outputsFrame.setStyleSheet('''
+        outputs_layout.addWidget(test_label)
+        outputs_frame.setStyleSheet('''
             #outputs_frame { background-color: red; }
         ''')
