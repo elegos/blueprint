@@ -1,10 +1,10 @@
-import logging
-import math
+import pickle
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from blueprint.models import Function
+from blueprint.ui.models import FnTreeItem
 from PySide6 import QtCore, QtGui
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QFrame, QGraphicsView, QHBoxLayout, QLabel,
@@ -14,10 +14,33 @@ from PySide6.QtWidgets import (QFrame, QGraphicsView, QHBoxLayout, QLabel,
 
 class FnTreeView(QTreeView):
     def startDrag(self, supportedActions: QtCore.Qt.DropActions) -> None:
-        logging.getLogger(f'{__class__.__name__}::startDrag').debug(
-            'TODO QPixmap replace')
+        index = self.currentIndex()
+        model: QtGui.QStandardItemModel = self.model()
+        fn_item: FnTreeItem = model.itemFromIndex(index)
 
-        return super().startDrag(supportedActions)
+        if type(fn_item) != FnTreeItem:
+            return super().startDrag(supportedActions)
+
+        widget = FunctionGraphicWidget(fn_item.function)
+
+        # QPixmap preparation
+        pixmap = widget.grab(QtCore.QRect(
+            QtCore.QPoint(0, 0), QtCore.QSize(-1, -1)))
+        # the default pixmap is completely opaque, so it will be painted semi-transparently
+        pm_image = QtGui.QImage(pixmap.size(), QtGui.QImage.Format_ARGB32)
+        pm_painter = QtGui.QPainter(pm_image)
+        pm_painter.setOpacity(0.45)
+        pm_painter.drawPixmap(QtCore.QPoint(0, 0), pixmap)
+        pm_painter.end()
+        pixmap = QtGui.QPixmap.fromImage(pm_image)
+
+        mime_data = QtCore.QMimeData()
+        mime_data.setData('binary/pickle', pickle.dumps(fn_item.function))
+
+        drag = QtGui.QDrag(self)
+        drag.setPixmap(pixmap)
+        drag.setMimeData(mime_data)
+        drag.exec(QtCore.Qt.CopyAction)
 
 
 class BlueprintGraphicsView(QGraphicsView):
