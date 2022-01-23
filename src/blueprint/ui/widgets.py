@@ -4,7 +4,7 @@ from pathlib import Path
 import platform
 from typing import Optional
 
-from blueprint.models import Function
+from blueprint.models import Flow, Function
 from blueprint.ui.models import FnTreeItem
 from PySide6 import QtCore, QtGui
 from PySide6.QtSvg import QSvgRenderer
@@ -45,8 +45,12 @@ class FnTreeView(QTreeView):
 
 
 class BlueprintGraphicsView(QGraphicsView):
-    def __init__(self, *args, **kwargs):
+    flow: Flow
+
+    def __init__(self, flow: Flow, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.flow = flow
 
         svg_data = Path(__file__).parent.joinpath(
             'images', 'background', 'graph-paper.svg').read_bytes()

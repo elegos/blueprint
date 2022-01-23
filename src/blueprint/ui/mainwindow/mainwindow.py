@@ -2,7 +2,6 @@
 import inspect
 import logging
 import os
-import time
 from io import StringIO
 from pathlib import Path
 from threading import Thread
@@ -38,6 +37,7 @@ class MainWindow(QMainWindow):
 
     settings: Settings
     project: Project
+    graphics_views: Dict[str, BlueprintGraphicsView]
 
     ui: QWidget
     menu: Menu
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self.signals = MainWindowSignals()
         self.settings = settings
         self.project = project
+        self.graphics_views = {}
 
         self.load_ui()
         self.init_ui()
@@ -241,19 +242,53 @@ class MainWindow(QMainWindow):
 
         logger.debug('TODO')
 
-    def on_flow_edit(self, *args):
-        logger = logging.getLogger('on_flow_edit')
+    def on_flow_open(self, index: QtCore.QModelIndex):
+        flow_name = index.data()
+        flow = next(
+            flow for flow in self.project.flows if flow.name == flow_name)
 
-        logger.debug('TODO')
+        flow_scene = QGraphicsScene(self)
 
-    def on_flow_item_changed(self, item: FlowListItem):
+        if flow.uid in self.graphics_views:
+            previous_tab = self.graphics_views[flow.uid]
+            previous_tab.deleteLater()
+
+        self.graphics_views[flow.uid] = BlueprintGraphicsView(flow, flow_scene)
+        view = self.graphics_views[flow.uid]
+        view.setObjectName(f'{flow.uid}_scene')
+
+        self.blueprintsTabWidget.addTab(
+            view, flow_name)
+
+        self.blueprintsTabWidget.setCurrentIndex(
+            self.blueprintsTabWidget.indexOf(view))
+
+    def on_flow_close(self, tab_index: int):
+        widget: BlueprintGraphicsView = self.blueprintsTabWidget.widget(
+            tab_index)
+
+        if widget.flow.uid in self.graphics_views:
+            self.graphics_views.pop(widget.flow.uid)
+        self.blueprintsTabWidget.removeTab(tab_index)
+
+    def on_flow_item_change(self, tab_index: int):
+        if not self.project:
+            return
+
+        edit_name_dialog = QInputDialog(self)
+        text, ok = edit_name_dialog.getText(
+            self, "Flow's new name", 'Choose a new name')
+        if text and ok:
+            self.on_flow_item_changed(tab_index, text)
+
+    def on_flow_item_changed(self, tab_index: int, new_name: str):
         logger = logging.getLogger('on_flow_item_changed')
 
+        current_name = self.blueprintsTabWidget.tabText(tab_index)
         existing_flow = next(
-            (flow for flow in self.project.flows if flow.uid == item.flow.uid))
-        new_name = item.text()
+            (flow for flow in self.project.flows if flow.name == current_name), None)
 
-        if new_name == existing_flow.name:
+        if not existing_flow or new_name == existing_flow.name:
             return
 
         other_existing_flow = next(
@@ -265,12 +300,13 @@ class MainWindow(QMainWindow):
         if not new_name or other_existing_flow:
             self.status_bar.showMessage(
                 'Flow name must be non-empty and unique.', 5000)
-            item.setText(existing_flow.name)
 
             return
 
         existing_flow.name = new_name
-        logger.debug('TODO: save flow on name change')
+        self.blueprintsTabWidget.setTabText(tab_index, new_name)
+
+        self.load_flows_from_project()
 
     def setup_flows_management_ui(self):
         self.newFlowPushButton.clicked.connect(self.on_new_flow)
@@ -278,7 +314,7 @@ class MainWindow(QMainWindow):
 
         list_model = QStandardItemModel()
         self.flowsListView.setModel(list_model)
-        list_model.itemChanged.connect(self.on_flow_item_changed)
+        self.flowsListView.doubleClicked.connect(self.on_flow_open)
 
         if not self.project:
             self.newFlowPushButton.setEnabled(False)
@@ -287,22 +323,18 @@ class MainWindow(QMainWindow):
         self.load_flows_from_project()
 
     def setup_flows_tab_group(self):
+        self.blueprintsTabWidget.tabBarDoubleClicked.connect(
+            self.on_flow_item_change)
+
+        self.blueprintsTabWidget.setTabsClosable(True)
+        tabBar = self.blueprintsTabWidget.tabBar()
+        tabBar.tabCloseRequested.connect(self.on_flow_close)
+
         # DEMO
-        example_scene = QGraphicsScene(self)
-        pen = QtGui.QPen(QtGui.Qt.GlobalColor.yellow)
-        brush = QtGui.QBrush(QtGui.Qt.GlobalColor.red)
-        example_scene.addRect(5, 5, 100, 100, pen, brush)
-
-        self.graphics_view = BlueprintGraphicsView(example_scene)
-        self.graphics_view.setObjectName('The view')
-        self.graphics_view.show()
-
         fn = Function('module.name', 'name', None)
 
         self.blueprintsTabWidget.addTab(
             FunctionGraphicWidget(fn), 'FunctionWidget demo')
-        self.blueprintsTabWidget.addTab(
-            self.graphics_view, 'GraphicsView demo')
 
     def setup_functions_tree_view(self):
         view = self.functionsTreeView
@@ -347,8 +379,6 @@ class MainWindow(QMainWindow):
         rootNode = model.invisibleRootItem()
         for flow in self.project.flows:
             rootNode.appendRow(FlowListItem(flow))
-
-        logger.debug('TODO (on double click)')
 
         self.newFlowPushButton.setEnabled(True)
         self.deleteFlowPushButton.setEnabled(True)

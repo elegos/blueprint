@@ -46,4 +46,4 @@ class FlowListItem(QStandardItem):
         self.flow = flow
 
         self.setText(self.flow.name)
-        self.setEditable(True)
+        self.setEditable(False)
