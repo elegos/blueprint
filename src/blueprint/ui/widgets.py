@@ -1,6 +1,7 @@
 import pickle
 from enum import Enum
 from pathlib import Path
+import platform
 from typing import Optional
 
 from blueprint.models import Function
@@ -84,6 +85,15 @@ class GraphWidget(QWidget):
 
         self.type = type
 
+    def header_path(self) -> str:
+        path = str(Path(__file__).parent.joinpath(
+            'images', 'background', 'spectrum-gradient.png'))
+
+        if platform.system() == 'Windows':
+            path = path.replace('\\', '/')
+
+        return path
+
     def setup_ui(self) -> None:
         self.setWindowOpacity(0.8)
 
@@ -97,11 +107,9 @@ class GraphWidget(QWidget):
         header_layout = QVBoxLayout()
         self.header.setLayout(header_layout)
 
-        png_url = Path(__file__).parent.joinpath(
-            'images', 'background', 'spectrum-gradient.png').absolute()
         self.header.setStyleSheet(f'''
             #header {{
-                border-image: url("{png_url}") 0 0 0 0 stretch stretch;
+                border-image: url("{self.header_path()}") 0 0 0 0 stretch stretch;
             }}
         ''')
 
